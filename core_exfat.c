@@ -248,7 +248,9 @@ static void __init_file_entry(struct super_block *sb, FILE_DENTRY_T *ep, u32 typ
 	exfat_set_entry_time((DENTRY_T *) ep, tp, TM_ACCESS);
 	ep->create_time_ms = 0;
 	ep->modify_time_ms = 0;
-	ep->access_time_ms = 0;
+	ep->create_utc_offset = 0x80;
+	ep->modify_utc_offset = 0x80;
+	ep->access_utc_offset = 0x80;
 }
 
 static void __init_strm_entry(STRM_DENTRY_T *ep, u8 flags, u32 start_clu, u64 size)
