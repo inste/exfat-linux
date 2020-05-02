@@ -16,6 +16,34 @@
 #include <asm/byteorder.h>
 #include <asm/unaligned.h>
 
+#if !defined(BITS_PER_BYTE_MASK)
+#define BITS_PER_BYTE_MASK	0x7
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 7, 0)
+#if defined(__BIG_ENDIAN)
+#define BITOP_LE_SWIZZLE	((BITS_PER_LONG-1) & ~0x7)
+static inline void set_bit_le(int nr, void *addr)
+{
+	set_bit(nr ^ BITOP_LE_SWIZZLE, addr);
+}
+
+static inline void clear_bit_le(int nr, void *addr)
+{
+	clear_bit(nr ^ BITOP_LE_SWIZZLE, addr);
+}
+#else
+static inline void set_bit_le(int nr, void *addr)
+{
+	set_bit(nr, addr);
+}
+static inline void clear_bit_le(int nr, void *addr)
+{
+	clear_bit(nr, addr);
+}
+#endif
+#endif
+
 static u8 free_bit[] = {
 	0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 4, 0, 1, 0, 2,/*  0 ~  19*/
 	0, 1, 0, 3, 0, 1, 0, 2, 0, 1, 0, 5, 0, 1, 0, 2, 0, 1, 0, 3,/* 20 ~  39*/
@@ -1086,7 +1114,7 @@ static s32 set_alloc_bitmap(struct super_block *sb, u32 clu)
 	b = clu & (u32)((sb->s_blocksize << 3) - 1);
 
 	sector = CLUS_TO_SECT(fsi, fsi->map_clu) + i;
-	bitmap_set((unsigned long *)(fsi->vol_amap[i]->b_data), b, 1);
+	set_bit_le(b, fsi->vol_amap[i]->b_data);
 
 	return exfat_write_sect(sb, sector, fsi->vol_amap[i], 0);
 }
@@ -1109,7 +1137,7 @@ static s32 clr_alloc_bitmap(struct super_block *sb, u32 clu)
 
 	sector = CLUS_TO_SECT(fsi, fsi->map_clu) + i;
 
-	bitmap_clear((unsigned long *)(fsi->vol_amap[i]->b_data), b, 1);
+	clear_bit_le(b, fsi->vol_amap[i]->b_data);
 
 	ret = exfat_write_sect(sb, sector, fsi->vol_amap[i], 0);
 
@@ -1377,29 +1405,34 @@ error:
 
 static s32 exfat_count_used_clusters(struct super_block *sb, u32 *ret_count)
 {
-	u32 count = 0;
-	u32 i, map_i, map_b;
 	FS_INFO_T *fsi = &(EXFAT_SB(sb)->fsi);
-	u32 total_clus = fsi->num_clusters - 2;
+	unsigned int count = 0;
+	unsigned int i, map_i = 0, map_b = 0;
+	unsigned int total_clus = fsi->num_clusters - 2;
+	unsigned int last_mask = total_clus & BITS_PER_BYTE_MASK;
+	unsigned char clu_bits;
+	const unsigned char last_bit_mask[] = {0, 0b00000001, 0b00000011,
+		0b00000111, 0b00001111, 0b00011111, 0b00111111, 0b01111111};
 
-	map_i = map_b = 0;
-
-	for (i = 0; i < total_clus; i += 8) {
-		u8 k = *(((u8 *) fsi->vol_amap[map_i]->b_data) + map_b);
-
-		count += used_bit[k];
-		if ((++map_b) >= (u32)sb->s_blocksize) {
+	total_clus &= ~last_mask;
+	for (i = 0; i < total_clus; i += BITS_PER_BYTE) {
+		clu_bits = *(fsi->vol_amap[map_i]->b_data + map_b);
+		count += used_bit[clu_bits];
+		if (++map_b >= (unsigned int)sb->s_blocksize) {
 			map_i++;
 			map_b = 0;
 		}
 	}
 
-	/* FIXME : abnormal bitmap count should be handled as more smart */
-	if (total_clus < count)
-		count = total_clus;
+	if (last_mask) {
+		clu_bits = *(fsi->vol_amap[map_i]->b_data + map_b);
+		clu_bits &= last_bit_mask[last_mask];
+		count += used_bit[clu_bits];
+	}
 
 	*ret_count = count;
 	return 0;
+
 }
 
 
