@@ -109,6 +109,8 @@ static inline void exfat_lock_super(struct super_block *sb)
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 
 	mutex_lock(&sbi->s_lock);
+#else
+	lock_super(sb);
 #endif
 }
 
@@ -118,6 +120,8 @@ static inline void exfat_unlock_super(struct super_block *sb)
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 
 	mutex_unlock(&sbi->s_lock);
+#else
+	unlock_super(sb);
 #endif
 }
 
