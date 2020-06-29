@@ -24,6 +24,7 @@ static int __exfat_write_inode(struct inode *inode, int sync)
 	struct exfat_sb_info *sbi = EXFAT_SB(sb);
 	struct exfat_inode_info *ei = EXFAT_I(inode);
 	bool is_dir = (ei->type == TYPE_DIR) ? true : false;
+	struct timespec64 ts64;
 
 	if (inode->i_ino == EXFAT_ROOT_INO)
 		return 0;
@@ -54,16 +55,18 @@ static int __exfat_write_inode(struct inode *inode, int sync)
 			&ep->dentry.file.create_time,
 			&ep->dentry.file.create_date,
 			&ep->dentry.file.create_time_cs);
-	exfat_set_entry_time(sbi, &inode->i_mtime,
+	exfat_set_entry_time(sbi, &ts64,
 			&ep->dentry.file.modify_tz,
 			&ep->dentry.file.modify_time,
 			&ep->dentry.file.modify_date,
 			&ep->dentry.file.modify_time_cs);
-	exfat_set_entry_time(sbi, &inode->i_atime,
+	inode->i_mtime = timespec64_to_timespec(ts64);
+	exfat_set_entry_time(sbi, &ts64,
 			&ep->dentry.file.access_tz,
 			&ep->dentry.file.access_time,
 			&ep->dentry.file.access_date,
 			NULL);
+	inode->i_atime = timespec64_to_timespec(ts64);
 
 	/* File size should be zero if there is no cluster allocated */
 	on_disk_size = i_size_read(inode);
@@ -604,10 +607,10 @@ static int exfat_fill_inode(struct inode *inode, struct exfat_dir_entry *info)
 
 	inode->i_blocks = ((i_size_read(inode) + (sbi->cluster_size - 1)) &
 		~(sbi->cluster_size - 1)) >> inode->i_blkbits;
-	inode->i_mtime = info->mtime;
-	inode->i_ctime = info->mtime;
+	inode->i_mtime = timespec64_to_timespec(info->mtime);
+	inode->i_ctime = timespec64_to_timespec(info->mtime);
 	ei->i_crtime = info->crtime;
-	inode->i_atime = info->atime;
+	inode->i_atime = timespec64_to_timespec(info->atime);
 
 	exfat_cache_init_inode(inode);
 

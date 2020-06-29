@@ -6,7 +6,7 @@
 ifneq ($(KERNELRELEASE),)
 # Called from inline kernel build
 # DKMS_DEFINE
-obj-$(CONFIG_EXFAT_FS) += exfat.o
+obj-m += exfat.o
 
 exfat-objs	:= inode.o namei.o dir.o super.o fatent.o cache.o nls.o misc.o \
 	   file.o balloc.o xattr.o

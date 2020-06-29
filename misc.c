@@ -129,7 +129,13 @@ void exfat_set_entry_time(struct exfat_sb_info *sbi, struct timespec64 *ts,
  * (There is no 10msIncrement field for access_time unlike create/modify_time)
  * atime also has only a 2-second resolution.
  */
-void exfat_truncate_atime(struct timespec64 *ts)
+void exfat_truncate_atime(struct timespec *ts)
+{
+	ts->tv_sec = round_down(ts->tv_sec, 2);
+	ts->tv_nsec = 0;
+}
+
+void exfat_truncate_atime64(struct timespec64 *ts)
 {
 	ts->tv_sec = round_down(ts->tv_sec, 2);
 	ts->tv_nsec = 0;

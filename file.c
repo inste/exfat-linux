@@ -160,7 +160,7 @@ int __exfat_truncate(struct inode *inode, loff_t new_size)
 		ep = exfat_get_dentry_cached(es, 0);
 		ep2 = exfat_get_dentry_cached(es, 1);
 
-		ts = current_time(inode);
+		ts = timespec_to_timespec64(current_time(inode));
 		exfat_set_entry_time(sbi, &ts,
 				&ep->dentry.file.modify_tz,
 				&ep->dentry.file.modify_time,

@@ -407,8 +407,9 @@ static int exfat_read_root(struct inode *inode)
 	EXFAT_I(inode)->i_size_ondisk = i_size_read(inode);
 
 	exfat_save_attr(inode, ATTR_SUBDIR);
-	inode->i_mtime = inode->i_atime = inode->i_ctime = ei->i_crtime =
+	inode->i_mtime = inode->i_atime = inode->i_ctime =
 		current_time(inode);
+	ei->i_crtime = timespec_to_timespec64(current_time(inode));
 	exfat_truncate_atime(&inode->i_atime);
 	exfat_cache_init_inode(inode);
 	return 0;
