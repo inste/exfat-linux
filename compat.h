@@ -7,6 +7,7 @@
 #define _EXFAT_COMPAT_H
 
 #include <linux/version.h>
+#include <linux/mm.h>
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 8, 0)
 #error "This driver doesn't support v5.8+, " \
@@ -43,6 +44,28 @@
 
 #ifndef sb_rdonly
 #define sb_rdonly(sb) ((sb)->s_flags & SB_RDONLY)
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 12, 0)
+#include <linux/vmalloc.h>
+#include <linux/slab.h>
+
+static void *kvzalloc(size_t sz, gfp_t flags)
+{
+	void *ptr = kzalloc(sz, flags | __GFP_NOWARN);
+
+	if (!ptr)
+		ptr = vzalloc(sz);
+	return ptr;
+}
+
+static inline void *kvmalloc_array(size_t n, size_t size, gfp_t flags)
+{
+	if (size != 0 && n > SIZE_MAX / size)
+		return NULL;
+
+	return kvzalloc(n * size, flags);
+}
 #endif
 
 #endif /* _EXFAT_COMPAT_H */
