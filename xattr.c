@@ -5,6 +5,7 @@
  *  xattr.c: exFAT code for supporting xattr(Extended File Attributes)
  */
 
+#include "exfat_raw.h"
 #include "exfat_fs.h"
 
 #ifdef CONFIG_EXFAT_VIRTUAL_XATTR
